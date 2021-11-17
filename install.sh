@@ -37,6 +37,26 @@ BIN_PATH="$INSTALL_PREFIX/bin"
 SHARE_PATH="$INSTALL_PREFIX/share/lyrebird"
 DESKTOP_PATH="$INSTALL_PREFIX/share/applications"
 
+# Checks if pavucontrol is installed by checking if version number exists
+pavucontrol_check() {
+    PAVU_CHECK='^[0-9]+([.][0-9]+)?$'
+    PAVU_VERSION=$(pavucontrol --version 2>/dev/null | grep -Po '\d\.\d')
+    if ! [[ $PAVU_VERSION =~ $PAVU_CHECK ]] ; then 
+        info_echo "Lyrebird requires Pavucontrol"
+        FAILED=1
+    fi
+}
+
+# Checks SoX installation in the same was as pavucontrol
+sox_check() {
+    SOX_CHECK='^[0-9]+([.][0-9]+)?$'
+    SOX_VERSION=$(sox --version 2>/dev/null | grep -Po '\d\.\d')
+    if ! [[ $SOX_VERSION =~ $SOX_CHECK ]] ; then
+        info_echo "Lyrebird requires SoX"
+        FAILED=1
+    fi
+}
+
 python_version_check() {
     PYTHON_VERSION=$(python3 --version | grep -Po '3\.\d')
 
@@ -52,13 +72,21 @@ python_version_check() {
 
     if [ "$PYTHON_MAJOR" -lt "$PYTHON_MIN_MAJOR" ]; then
         invalid_python
-        exit 1
+        # Replace exit with failed to show multiple uninstalled errors
+        FAILED=1
     elif [ "$PYTHON_MAJOR" -eq "$PYTHON_MIN_MAJOR" ] && [ "$PYTHON_MINOR" -lt "$PYTHON_MIN_MINOR" ]; then
         invalid_python
-        exit 1
+        FAILED=1
     fi
 }
 python_version_check
+pavucontrol_check
+sox_check
+# Checks if any check failed
+if [ "$FAILED" == 1 ]; then 
+   info_echo "Lyrebird Failed to install"
+   exit 1
+fi
 
 # Removing previous versions
 remove_deprecated_install() {
